@@ -165,6 +165,14 @@ services:
     networks:
       app_network:
         ipv4_address: 10.5.0.9
+        
+  chaos-monkey:
+    image: chaos-monkey:latest
+    depends_on:
+      - patroni1
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.10
 
   minio:
     image: minio/minio:latest
