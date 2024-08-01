@@ -1,0 +1,215 @@
+name: terraform-enterprise
+services:
+  tfe:
+    image: images.releases.hashicorp.com/hashicorp/terraform-enterprise:v202407-1
+    env_file:
+      - path: ./tfe/tfe.env
+        required: true
+    environment:
+      TFE_HOSTNAME: "tfe.local"
+      TFE_ENCRYPTION_PASSWORD: asdfawefqwefzvdcfgaghraefsdf
+      TFE_OPERATIONAL_MODE: "external"
+      TFE_TLS_CERT_FILE: "/etc/ssl/private/terraform-enterprise/cert.pem"
+      TFE_TLS_KEY_FILE: "/etc/ssl/private/terraform-enterprise/key.pem"
+      TFE_TLS_CA_BUNDLE_FILE: "/etc/ssl/private/terraform-enterprise/bundle.pem"
+      TFE_IACT_SUBNETS: "172.16.0.0/12"
+      TFE_METRICS_ENABLED: "true"
+      TFE_OBJECT_STORAGE_TYPE: "s3"
+      TFE_OBJECT_STORAGE_S3_ACCESS_KEY_ID: "terraformaccess"
+      TFE_OBJECT_STORAGE_S3_SECRET_ACCESS_KEY: "terraformsecret"
+      TFE_OBJECT_STORAGE_S3_REGION: "us-east-1"
+      TFE_OBJECT_STORAGE_S3_ENDPOINT: "http://minio:9000"
+      TFE_OBJECT_STORAGE_S3_BUCKET: "tfe"
+      TFE_DATABASE_USER: "postgres"
+      TFE_DATABASE_PASSWORD: "password"
+      TFE_DATABASE_HOST: "master.postgres.service.consul:5432"
+      TFE_DATABASE_NAME: "postgres"
+      TFE_DATABASE_PARAMETERS: "sslmode=disable"
+    cap_add:
+      - IPC_LOCK
+    read_only: true
+    dns:
+      - 10.5.0.9
+    tmpfs:
+      - /tmp:mode=01777
+      - /run
+      - /var/log/terraform-enterprise
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9090:9090"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /run/docker.sock
+      - type: bind
+        source: ./certs
+        target: /etc/ssl/private/terraform-enterprise
+      - type: volume
+        source: terraform-enterprise-data
+        target: /var/lib/terraform-enterprise
+      - type: volume
+        source: terraform-enterprise-cache
+        target: /var/cache/tfe-task-worker
+    depends_on:
+      - patroni1
+      - patroni2
+      - patroni3
+      - minio
+      - dnsmasq
+    entrypoint: ["/bin/bash", "-c", "sleep 5 && /usr/local/bin/supervisord-run"]
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.2
+
+
+  consul:
+    image: hashicorp/consul:latest
+    ports:
+      - "8500:8500"
+    command: "consul agent -data-dir=/consul/data -server -bootstrap-expect=1 -client=0.0.0.0"
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.3
+    expose:
+      - "8600"
+
+  patroni1:
+    image: patroni-consul:latest
+    environment:
+      PATRONI_NAME: patroni1
+      PATRONI_SCOPE: postgres
+      PATRONI_NAMESPACE: /service/
+      PATRONI_RESTAPI_LISTEN: "0.0.0.0:8008"
+      PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni1:8008"
+      PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni1:5432"
+      PATRONI_CONSUL_REGISTER_SERVICE: "on"
+      PATRONI_CONSUL_HOST: "consul:8500"
+      PATRONI_DCS: "consul"
+      PATRONI_SUPERUSER_USERNAME: "postgres"
+      PATRONI_SUPERUSER_PASSWORD: "password"
+      PATRONI_REPLICATION_USERNAME: "replicator"
+      PATRONI_REPLICATION_PASSWORD: "password"
+    ports:
+      - "5432:5432"
+      - "8008:8008"
+    depends_on:
+      - consul
+    volumes:
+      - patroni1-data:/var/lib/postgresql/data
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.4
+
+  patroni2:
+    image: patroni-consul:latest
+    environment:
+      PATRONI_NAME: patroni2
+      PATRONI_SCOPE: postgres
+      PATRONI_NAMESPACE: /service/
+      PATRONI_RESTAPI_LISTEN: "0.0.0.0:8008"
+      PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni2:8008"
+      PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni2:5432"
+      PATRONI_CONSUL_HOST: "consul:8500"
+      PATRONI_CONSUL_REGISTER_SERVICE: "on"
+      PATRONI_DCS: "consul"
+      PATRONI_SUPERUSER_USERNAME: "postgres"
+      PATRONI_SUPERUSER_PASSWORD: "password"
+      PATRONI_REPLICATION_USERNAME: "replicator"
+      PATRONI_REPLICATION_PASSWORD: "password"
+    ports:
+      - "5433:5432"
+      - "8009:8008"
+    depends_on:
+      - consul
+    volumes:
+      - patroni2-data:/var/lib/postgresql/data
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.5
+
+  patroni3:
+    image: patroni-consul:latest
+    environment:
+      PATRONI_NAME: patroni3
+      PATRONI_SCOPE: postgres
+      PATRONI_NAMESPACE: /service/
+      PATRONI_RESTAPI_LISTEN: "0.0.0.0:8008"
+      PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni3:8008"
+      PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni3:5432"
+      PATRONI_CONSUL_HOST: "consul:8500"
+      PATRONI_CONSUL_REGISTER_SERVICE: "on"
+      PATRONI_DCS: "consul"
+      PATRONI_SUPERUSER_USERNAME: "postgres"
+      PATRONI_SUPERUSER_PASSWORD: "password"
+      PATRONI_REPLICATION_USERNAME: "replicator"
+      PATRONI_REPLICATION_PASSWORD: "password"
+    ports:
+      - "5434:5432"
+      - "8010:8008"
+    depends_on:
+      - consul
+    volumes:
+      - patroni3-data:/var/lib/postgresql/data
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.6
+
+  dnsmasq:
+    image: dnsmasq:latest
+    depends_on:
+      - consul
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.9
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: terraformaccess
+      MINIO_ROOT_PASSWORD: terraformsecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - type: volume
+        source: minio-data
+        target: /data
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.7
+
+  minio-bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 2;
+      /usr/bin/mc alias set myminio http://minio:9000 terraformaccess terraformsecret;
+      /usr/bin/mc mb myminio/tfe;
+      exit 0;
+      "
+    networks:
+      app_network:
+        ipv4_address: 10.5.0.8
+
+volumes:
+  terraform-enterprise-data:
+  terraform-enterprise-cache:
+  patroni1-data:
+  patroni2-data:
+  patroni3-data:
+  minio-data:
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/24
+         gateway: 10.5.0.1
