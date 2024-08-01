@@ -165,14 +165,26 @@ services:
     networks:
       app_network:
         ipv4_address: 10.5.0.9
-        
-  chaos-monkey:
-    image: chaos-monkey:latest
+
+
+
+  test-container:
+    image: dnsmasq:latest
+    dns: 
+      - 10.5.0.9
     depends_on:
-      - patroni1
+      - dnsmasq
     networks:
       app_network:
-        ipv4_address: 10.5.0.10
+        ipv4_address: 10.5.0.11
+        
+  # chaos-monkey:
+  #   image: chaos-monkey:latest
+  #   depends_on:
+  #     - patroni1
+  #   networks:
+  #     app_network:
+  #       ipv4_address: 10.5.0.10
 
   minio:
     image: minio/minio:latest
