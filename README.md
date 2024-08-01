@@ -10,10 +10,10 @@ as the mechanism to find the Postgres leader.
 
 ## Installation
 Procure a TFE FDO license and create a file named `tfe.env` in the ./tfe folder.  The file should look like:
-    ```tfe.env
-    # Filename: tfe.env
-    TFE_LICENSE=<license>
-    ```
+```tfe.env
+# Filename: tfe.env
+TFE_LICENSE=<license>
+```
 
 ### Docker Containers
 A couple containers need to be built locally for this lab to work.
