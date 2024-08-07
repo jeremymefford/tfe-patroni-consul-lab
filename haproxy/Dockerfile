@@ -1,5 +1,13 @@
 FROM haproxy:latest
 
-COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+USER root
+RUN mkdir -p /run/haproxy
+RUN chown haproxy:haproxy /run/haproxy
 
-ENTRYPOINT ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+RUN mkdir -p /var/lib/haproxy
+RUN chown haproxy:haproxy /var/lib/haproxy
+RUN chmod 755 /var/lib/haproxy
+
+USER haproxy
+
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg

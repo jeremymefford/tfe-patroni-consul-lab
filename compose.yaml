@@ -1,7 +1,8 @@
 name: terraform-enterprise
 services:
   tfe:
-    image: images.releases.hashicorp.com/hashicorp/terraform-enterprise:v202407-1
+    # image: images.releases.hashicorp.com/hashicorp/terraform-enterprise:v202407-1
+    image: quay.io/hashicorp/terraform-enterprise:0a58824
     env_file:
       - path: ./tfe/tfe.env
         required: true
@@ -13,7 +14,7 @@ services:
       TFE_TLS_KEY_FILE: "/etc/ssl/private/terraform-enterprise/key.pem"
       TFE_TLS_CA_BUNDLE_FILE: "/etc/ssl/private/terraform-enterprise/bundle.pem"
       TFE_IACT_SUBNETS: "172.16.0.0/12"
-      TFE_METRICS_ENABLED: "true"
+      TFE_METRICS_ENABLE: "true"
       TFE_OBJECT_STORAGE_TYPE: "s3"
       TFE_OBJECT_STORAGE_S3_ACCESS_KEY_ID: "terraformaccess"
       TFE_OBJECT_STORAGE_S3_SECRET_ACCESS_KEY: "terraformsecret"
@@ -23,6 +24,7 @@ services:
       TFE_DATABASE_USER: "postgres"
       TFE_DATABASE_PASSWORD: "password"
       TFE_DATABASE_HOST: "master.postgres.service.consul:5432"
+      # TFE_DATABASE_HOST: "haproxy:5432"
       TFE_DATABASE_NAME: "postgres"
       TFE_DATABASE_PARAMETERS: "sslmode=disable"
     cap_add:
@@ -56,6 +58,7 @@ services:
       - patroni2
       - patroni3
       - minio
+      - haproxy
       - dnsmasq
     entrypoint: ["/bin/bash", "-c", "sleep 5 && /usr/local/bin/supervisord-run"]
     networks:
@@ -84,6 +87,7 @@ services:
       PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni1:8008"
       PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni1:5432"
+      # PATRONI_POSTGRESQL_DATA_DIR: "/var/lib/postgresql/data"
       PATRONI_CONSUL_REGISTER_SERVICE: "on"
       PATRONI_CONSUL_HOST: "consul:8500"
       PATRONI_DCS: "consul"
@@ -111,6 +115,7 @@ services:
       PATRONI_RESTAPI_LISTEN: "0.0.0.0:8008"
       PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni2:8008"
       PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
+      # PATRONI_POSTGRESQL_DATA_DIR: "/var/lib/postgresql/data"
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni2:5432"
       PATRONI_CONSUL_HOST: "consul:8500"
       PATRONI_CONSUL_REGISTER_SERVICE: "on"
@@ -138,6 +143,7 @@ services:
       PATRONI_NAMESPACE: /service/
       PATRONI_RESTAPI_LISTEN: "0.0.0.0:8008"
       PATRONI_RESTAPI_CONNECT_ADDRESS: "patroni3:8008"
+      # PATRONI_POSTGRESQL_DATA_DIR: "/var/lib/postgresql/data"
       PATRONI_POSTGRESQL_LISTEN: "0.0.0.0:5432"
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: "patroni3:5432"
       PATRONI_CONSUL_HOST: "consul:8500"
@@ -166,17 +172,27 @@ services:
       app_network:
         ipv4_address: 10.5.0.9
 
-
-
-  test-container:
-    image: dnsmasq:latest
-    dns: 
-      - 10.5.0.9
+  haproxy:
+    image: haproxy-patroni:latest
     depends_on:
-      - dnsmasq
+      - patroni1
+      - patroni2
+      - patroni3
+    ports:
+      - "8404:8404"
     networks:
       app_network:
-        ipv4_address: 10.5.0.11
+        ipv4_address: 10.5.0.12
+
+  # test-container:
+  #   image: dnsmasq:latest
+  #   dns: 
+  #     - 10.5.0.9
+  #   depends_on:
+  #     - dnsmasq
+  #   networks:
+  #     app_network:
+  #       ipv4_address: 10.5.0.11
         
   # chaos-monkey:
   #   image: chaos-monkey:latest

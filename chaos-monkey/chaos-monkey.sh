@@ -35,5 +35,9 @@ while true; do
     curl -s -X POST "http://$LEADER:8008/switchover" \
         -d "{\"leader\":\"$LEADER\",\"force\": true}"
     echo ""
-    sleep 5
+    echo "Double checking with psql..."
+    LEADER=$(curl -s -X GET "http://patroni1:8008/cluster" | jq -r '.members[] | select(.role == "leader") | .name')
+    PSQL_LEADER=$(PGPASSWORD=password psql -h $LEADER -U postgres -c "show transaction_isolation" | grep -oP "read committed")
+    echo "Transaction isolation level on $LEADER: $PSQL_LEADER"
+    sleep 30
 done
