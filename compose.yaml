@@ -27,6 +27,9 @@ services:
       # TFE_DATABASE_HOST: "haproxy:5432"
       TFE_DATABASE_NAME: "postgres"
       TFE_DATABASE_PARAMETERS: "sslmode=disable"
+      TFE_DATABASE_RECONNECT_ENABLED: true
+      TFE_RUN_PIPELINE_DOCKER_EXTRA_HOSTS: "tfe.local:10.5.0.2"
+      TFE_RUN_PIPELINE_DOCKER_NETWORK: "app_network"
     cap_add:
       - IPC_LOCK
     read_only: true
@@ -39,6 +42,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8800:8800"
       - "9090:9090"
     volumes:
       - type: bind
@@ -244,6 +248,7 @@ volumes:
 
 networks:
   app_network:
+    name: app_network
     driver: bridge
     ipam:
      config:
