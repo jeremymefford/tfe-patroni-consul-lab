@@ -30,6 +30,7 @@ services:
       TFE_DATABASE_RECONNECT_ENABLED: true
       TFE_RUN_PIPELINE_DOCKER_EXTRA_HOSTS: "tfe.local:10.5.0.2"
       TFE_RUN_PIPELINE_DOCKER_NETWORK: "app_network"
+      TFE_RUN_PIPELINE_IMAGE: "tfe-agent"
     cap_add:
       - IPC_LOCK
     read_only: true
