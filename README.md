@@ -44,6 +44,19 @@ To build and run the Dnsmasq container, follow these steps:
     docker build -t dnsmasq .
     ```
 
+#### TFE Agent Container
+To build and run the TFE Agent container, follow these steps:
+
+1. Copy the `certs/cert.pem` file from the TFE installation directory into the `./tfe-agent` directory:
+    ```
+    cp ./certs/cert.pem ./tfe-agent/certificate.crt
+    ```
+2. Go into the `./tfe-agent` directory.
+3. Build the container locally using the following command:
+    ```
+    docker build -t tfe-agent .
+    ```
+
 ## Usage
 Once all the containers have been built, you should be able to run 
     ```
